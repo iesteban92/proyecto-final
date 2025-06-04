@@ -13,7 +13,7 @@ services:
   db:
     image: mysql:8.0
     restart: always
-    container_name: mysql
+    container_name: mysql2
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: pedidos_db
