@@ -1,24 +1,76 @@
-version: "3.9"
+version: '3.8'
 
 services:
-  app:
-    build: .
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pedidos
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./model:/docker-entrypoint-initdb.d 
+    networks:
+      - backend
+  flask_app:
+    build: ./app
+    depends_on:
+      - mysql
+    environment:
+      - FLASK_ENV=development
     ports:
       - "5000:5000"
-    environment:
-      DB_HOST: mysql
-    depends_on:
-      - db
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  db:
-    image: mysql:8.0
-    restart: always
-    container_name: mysql2
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: pedidos_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+  prometheus:
+    image: prom/prometheus
     volumes:
-      - ./data:/var/lib/mysql
-      - ./model:/docker-entrypoint-initdb.d/
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitor
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - monitor
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitor
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - /var/log:/var/log
+      - ./promtail/config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    networks:
+      - monitor
+    command: -config.file=/etc/promtail/config.yml
+
+volumes:
+  mysql_data:
+  grafana_data:
+
+networks:
+  backend:
+  monitor:

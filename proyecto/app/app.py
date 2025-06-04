@@ -10,6 +10,10 @@ from models import Base, Pedido
 from config import engine, DB_USER, DB_PASSWORD, DB_HOST, DB_NAME
 
 
+current_directory = os.path.dirname(os.path.abspath(__file__))
+logs_dir = os.path.join(current_directory, "logs")
+os.makedirs(logs_dir, exist_ok=True)
+
 app = Flask(__name__)
 Session = sessionmaker(bind=engine)
 session = Session()
